@@ -1,0 +1,2 @@
+lscpu | grep Endian
+xxd -b  assignment3_dump

@@ -1,0 +1,87 @@
+
+“I have read and understood the course academic integrity policy
+located at
+http://www.cse.buffalo.edu/faculty/dimitrio/courses/cse4589_f14/index.ht
+ml#integrity”
+
+1 .Data Structure To be used for defining the packets :
+
+	typedef struct 
+	{
+	 uint32_t serv_ipaddr;
+	 uint16_t serv_port ;
+	 uint16_t filler;    -- padding field
+	 uint16_t serv_id ;
+	 uint16_t serv_cost ;
+
+	}serv_infpkt ;
+
+	typedef struct 
+	{
+	 uint16_t n_updtfiedls;   - number of update fields
+	 uint16_t serv_port;      
+	 uint32_t ip_addr;
+	 serv_infpkt servers[5];  -array of the serv_infpkt  the data of each server nodes
+	}routing_updtpacket;
+
+  rtupdtpacket is the structure of the router update packet that will be used to update the routing information by the nearest neighbors.   
+  server_infpkt holds the information of one of the server in the network.
+  Initially we define an array of 5 that is the maximum number of network nodes allowed,but while sending an update packet as byte stream we    will write to the sending sockets only the data bytes of the nodes in the network.So if there are only 3 nodes in the network we wil calculate the total bytes of the packet when there are only 3 nodes and write only this bytes of data to the socket.
+
+2. Data structure to be used for storing the routing table :
+
+   typedef struct 
+	{
+	 int dest_serv_id;
+         int next_hop_serv_id;
+	 int serv_port;
+	 int path_cost ;
+	 int timer_tick;
+	 struct in_addr ;
+        }rt_table_line;
+            
+            The routing table will be a two dimensional array of the structure defined above.
+This list will be holding all the information of the nodes in the network .The updation will be done in this structure.
+
+3. Pseudocode for the main select loop :
+
+  Select Loop
+  In the wait loop .
+  1. Loop through the  the file descriptors in the select .
+  2. Using the FD_ISSET() macro check which of the file descriptors is ready for reading.
+  3. If the file descriptor is standard input
+	Call Method processcommand() -- this method process the command entered by the 
+	user and calls the appropriate methods based on the commands
+
+  4. Else If the file descriptor is the fd of server socket that is bound 
+          Receive the data and call the function computerouting(data).This method calculates the new routing cost for the links.
+          And if there is anychange in the distance vector will send the updates.   
+
+  processcommand()
+
+  If command  is update <server-ID1><server-ID2><Link Cost> ,call the method  
+  updtRTInfo(server_id1,serverid_2,cost).This method will update the link cost for the  
+  specified link.
+  If command is step.Call method sendRTUpdt().This method sends the routing update 
+  to the neighbors.
+  If the command is  packets.Call the method  to printPacketNos().
+  If command is display - Call method printrouttable() - which prints routing table.
+  If command is disable<server-ID>.Call closeconnectn(serverid).Closes the 
+  connection to the server.
+  If command is crash ,call method servercrash().The servecrash method has got an infinite loop and it will run infinitely.
+  If command is dump ,call method dmppkt() a routing packet and write it to binary file.
+
+4. Strategy to implement timer :
+
+ 1.There will be an array of  rt_table_line structure (storing neighbor details) where we will be storing  a counter – timer_tick value for the 
+   neighbors of the current local node. 
+ 2.Timer_tick variable is set to 3.
+ 3.Initially we will set the SELECT[SELECT(.....,...,...,&timeoutval)] with the initial timeout value. 
+ 4.When a timeout occurs we will reduce the timer_tick count variable value of each neighbor nodes.
+ 5.The select returns 0 when an timeout has occurredthen decrement the tick_time by 1 for the neighbor nodes.
+ 6.If the timer tick value for the node becomes zero (3 timeout intervals) the routing table will be updated and the value to that particular   
+   neighbor will be updated to infinity.
+ 7.When an update packet is obtained by the local node from a neighbor then the tick_count associated with that particular node will
+   be reset to 3.
+
+
